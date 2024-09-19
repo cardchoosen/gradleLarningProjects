@@ -1,0 +1,72 @@
+this.beforeEvaluate {
+
+    println "beforeEvaluate.."
+
+}
+
+this.gradle.beforeProject {
+
+    println "beforeProject.."
+
+}
+
+this.gradle.afterProject {
+
+    println "afterProject.."
+
+}
+
+this.gradle.taskGraph.whenReady {
+    println "whenReady.."
+}
+
+task A {
+
+    println "Configuration: A.." 
+
+    doLast {
+        println actions
+        println "doLast A"
+    }
+}
+
+task B {
+
+    println "Configuration: B.."
+
+    doLast {
+        println actions
+        println "doLast B"
+    }
+}
+
+task C {
+
+    println "Configuration: C.."
+
+    doLast {
+        println actions
+        println "doLast C"
+    }
+}
+
+task allTasks(dependsOn: [A, B, C]){
+
+    println "Configuration: allTasks.."
+
+    doLast {
+        println "doLast allTasks"
+    }
+}
+
+task finalized{
+    doLast {
+        println "clearing allTasks.."
+    }
+}
+
+allTasks.finalizedBy finalized
+
+this.gradle.buildFinished {
+    println "buildFinished.."
+}
