@@ -1,0 +1,75 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+plugins {
+alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.jetbrains.kotlin.android) apply false
+}
+
+// =======================================
+// Gradle提供的钩子函数
+// 配置阶段：
+gradle.beforeProject {
+    println "gradle.beforeProject"
+}
+gradle.afterProject {
+    println "gradle.afterProject"
+}
+gradle.taskGraph.whenReady {
+    println "gradle.taskGraph.whenReady"
+}
+beforeEvaluate {
+
+    println "beforeEvaluate"
+}
+afterEvaluate {
+    println "afterEvaluate"
+}
+
+
+//==================
+// 为gradle设置监听
+gradle.addProjectEvaluationListener(new ProjectEvaluationListener() {
+    @Override
+    void beforeEvaluate(Project project) {
+        println "Configure listener beforeEvaluate"
+    }
+
+    @Override
+    void afterEvaluate(Project project, ProjectState state) {
+        println "Configure listener afterEvaluate"
+    }
+})
+
+
+gradle.addBuildListener(new BuildListener() {
+
+    void buildStarted(Gradle gradle) {
+        println "Build listener buildStarted"
+    }
+
+    @Override
+    void settingsEvaluated(Settings settings) {
+        println "Build listener settingsEvaluated"
+    }
+
+    @Override
+    void projectsLoaded(Gradle gradle) {
+        println "Build listener projectsLoaded"
+    }
+
+    @Override
+    void projectsEvaluated(Gradle gradle) {
+        println "Build listener projectsEvaluated"
+    }
+
+    @Override
+    void buildFinished(BuildResult result) {
+        println "Build listener buildFinished"
+    }
+})
+
+task runGradle{
+    println "configure runGradle AAAAAA"
+    doFirst {
+        println "doFirst runGradle AAAAAA"
+    }
+}
