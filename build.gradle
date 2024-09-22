@@ -4,72 +4,109 @@ alias(libs.plugins.android.application) apply false
     alias(libs.plugins.jetbrains.kotlin.android) apply false
 }
 
-// =======================================
-// Gradle提供的钩子函数
-// 配置阶段：
-gradle.beforeProject {
-    println "gradle.beforeProject"
+//// =======================================
+//// Gradle提供的钩子函数
+//// 配置阶段：
+//gradle.beforeProject {
+//    println "gradle.beforeProject"
+//}
+//gradle.afterProject {
+//    println "gradle.afterProject"
+//}
+//gradle.taskGraph.whenReady {
+//    println "gradle.taskGraph.whenReady"
+//}
+//beforeEvaluate {
+//
+//    println "beforeEvaluate"
+//}
+//afterEvaluate {
+//    println "afterEvaluate"
+//}
+//
+//
+////==================
+//// 为gradle设置监听
+//gradle.addProjectEvaluationListener(new ProjectEvaluationListener() {
+//    @Override
+//    void beforeEvaluate(Project project) {
+//        println "Configure listener beforeEvaluate"
+//    }
+//
+//    @Override
+//    void afterEvaluate(Project project, ProjectState state) {
+//        println "Configure listener afterEvaluate"
+//    }
+//})
+//
+//
+//gradle.addBuildListener(new BuildListener() {
+//
+//    void buildStarted(Gradle gradle) {
+//        println "Build listener buildStarted"
+//    }
+//
+//    @Override
+//    void settingsEvaluated(Settings settings) {
+//        println "Build listener settingsEvaluated"
+//    }
+//
+//    @Override
+//    void projectsLoaded(Gradle gradle) {
+//        println "Build listener projectsLoaded"
+//    }
+//
+//    @Override
+//    void projectsEvaluated(Gradle gradle) {
+//        println "Build listener projectsEvaluated"
+//    }
+//
+//    @Override
+//    void buildFinished(BuildResult result) {
+//        println "Build listener buildFinished"
+//    }
+//})
+//
+//task runTask{
+//    println "configure runTask gradleLearningProjectLab2"
+//    doFirst {
+//        println "doFirst runTask gradleLearningProjectLab2"
+//    }
+//}
+
+ext {
+    extA = 'extA'
+    extB = 'extB'
 }
-gradle.afterProject {
-    println "gradle.afterProject"
+
+ext.extC = 'extC'
+
+println project.ext.extA
+println ext.extB
+println extC
+
+task runTask{
+    println 'runTask\t' + project.ext.extA
+    println 'runTask\t' + project.extB
+    println 'runTask\t' + extC
 }
-gradle.taskGraph.whenReady {
-    println "gradle.taskGraph.whenReady"
-}
-beforeEvaluate {
-
-    println "beforeEvaluate"
-}
-afterEvaluate {
-    println "afterEvaluate"
-}
 
 
-//==================
-// 为gradle设置监听
-gradle.addProjectEvaluationListener(new ProjectEvaluationListener() {
-    @Override
-    void beforeEvaluate(Project project) {
-        println "Configure listener beforeEvaluate"
-    }
-
-    @Override
-    void afterEvaluate(Project project, ProjectState state) {
-        println "Configure listener afterEvaluate"
-    }
-})
-
-
-gradle.addBuildListener(new BuildListener() {
-
-    void buildStarted(Gradle gradle) {
-        println "Build listener buildStarted"
-    }
-
-    @Override
-    void settingsEvaluated(Settings settings) {
-        println "Build listener settingsEvaluated"
-    }
-
-    @Override
-    void projectsLoaded(Gradle gradle) {
-        println "Build listener projectsLoaded"
-    }
-
-    @Override
-    void projectsEvaluated(Gradle gradle) {
-        println "Build listener projectsEvaluated"
-    }
-
-    @Override
-    void buildFinished(BuildResult result) {
-        println "Build listener buildFinished"
-    }
-})
-
-task runGradle{
-    println "configure runGradle AAAAAA"
-    doFirst {
-        println "doFirst runGradle AAAAAA"
+class WriteFileTask extends DefaultTask {
+    @TaskAction
+    void writeFile() {
+        println "writeFile()"
+        def inFile = inputs.files.singleFile
+        def outFile = outputs.files.singleFile
+        outFile.createNewFile()
+        outFile.text = inFile.text
     }
 }
+
+task writeFileTask(type: WriteFileTask) {
+    inputs.file file('app/src/main/java/com/example/gradlelearningproject/MainActivity.kt')
+    outputs.file file('text.txt')
+}
+
+
+
