@@ -86,7 +86,7 @@ task runTask{
 }
 
 ```
-执行gradle runTask(若遇到了JDK版本问题，可以参考)，输出如下：
+执行gradle runTask(若遇到了JDK版本问题，可以参考 [如何在Mac命令行环境中切换JDK版本](https://juejin.cn/post/7418072992837976074))，输出如下：
 ```shell
 > Configure project :
 configure runTask gradleLearningProjectLab2
