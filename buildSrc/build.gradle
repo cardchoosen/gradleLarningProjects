@@ -1,4 +1,0 @@
-plugins {
-    id 'groovy'  // 如果使用 Groovy
-    // 或者使用 Java
-}
