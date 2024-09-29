@@ -9,14 +9,17 @@ Labs - README 完成情况
     - 生命周期
     - 执行流
     - 任务
- - [x] Lab2
+ - [x] [Lab2](https://github.com/cardchoosen/gradleLarningProjects/tree/lab3?tab=readme-ov-file#lab3)
     - 核心模型
     - 守护进程Daemon
     - 属性扩展
     - 自定义任务
         - 文件数据写入
         - 文件压缩
- - [ ] Lab3
+ - [x] [Lab3](https://github.com/cardchoosen/gradleLarningProjects/tree/lab3?tab=readme-ov-file#lab3)
+    - 插件
+    - AGP
+    - 自定义插件
  - [ ] Lab4
  - [ ] Lab5  
 
