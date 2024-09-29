@@ -248,7 +248,7 @@ dependencies {
 ### 2.buildSrc
 在项目根目录下创建buildSrc目录，会自动识别并构建。sync后生成其build目录，groovy/java/kotlin也会变成源文件目录，之后编写代码。  
  之后可以通过插件类的全类名来使用。
-### 独立项目  
+### 3.独立项目  
 Todo  
 
 新建一个module工程，只保留build.gradle和src/main目录
