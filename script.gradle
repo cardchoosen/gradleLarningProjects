@@ -1,0 +1,6 @@
+afterEvaluate {
+    println tasks.getByName("packageDebug")
+    task ("scriptTask") {
+        println "afterEvaluate - scriptTask"
+    }
+}

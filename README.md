@@ -1,273 +1,259 @@
-# Lab2
-## Gradle核心模型
-### gradle的钩子函数
-gradle的执行流程图如下
-
-![hooks](img/gradle_hook.jpg)
-
-如图，gradle在初始化、配置、执行阶段都有各自的钩子函数来处理自定义的构建逻辑。  
-gradle同时也能监听各阶段的回调处理：
-* gradle.addProjectEvaluationListener
-* gradle.addBuildListener
-* gradle.addListener
-
-coding验证，首先新建一个As基础项目，在Project的build.gradle中写入
-```gradle
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
-plugins {
-alias(libs.plugins.android.application) apply false
-    alias(libs.plugins.jetbrains.kotlin.android) apply false
-}
-
-// Gradle提供的钩子函数
-// 配置阶段：
-gradle.beforeProject {
-    println "gradle.beforeProject"
-}
-gradle.afterProject {
-    println "gradle.afterProject"
-}
-gradle.taskGraph.whenReady {
-    println "gradle.taskGraph.whenReady"
-}
-beforeEvaluate {
-    println "beforeEvaluate"
-}
+# Lab3
+## Gradle插件
+Gradle插件与Gradle是2个概念，Gradle提供了一套核心构建机制，而Gradle插件是运行在该框架上的具体逻辑。
+Gradle插件：
+ - 逻辑复用: 可以将一些通用的逻辑封装成插件，然后在其他项目中使用
+ - 组件发布: 可以将一些组件发布到公共仓库中，其他项目可以直接使用
+ - 配置构建: Gradle插件可以声明插件扩展来暴露可配置的属性，提供定制化能力
+### 1.脚本插件
+脚本插件就是对某个script文件的引用，使用from加载
+```groovy
+// script.gradle
 afterEvaluate {
-    println "afterEvaluate"
-}
-
-// 为gradle设置监听
-gradle.addProjectEvaluationListener(new ProjectEvaluationListener() {
-    @Override
-    void beforeEvaluate(Project project) {
-        println "Configure listener beforeEvaluate"
-    }
-
-    @Override
-    void afterEvaluate(Project project, ProjectState state) {
-        println "Configure listener afterEvaluate"
-    }
-})
-
-
-gradle.addBuildListener(new BuildListener() {
-
-    void buildStarted(Gradle gradle) {
-        println "Build listener buildStarted"
-    }
-
-    @Override
-    void settingsEvaluated(Settings settings) {
-        println "Build listener settingsEvaluated"
-    }
-
-    @Override
-    void projectsLoaded(Gradle gradle) {
-        println "Build listener projectsLoaded"
-    }
-
-    @Override
-    void projectsEvaluated(Gradle gradle) {
-        println "Build listener projectsEvaluated"
-    }
-
-    @Override
-    void buildFinished(BuildResult result) {
-        println "Build listener buildFinished"
-    }
-})
-
-task runTask{
-    println "configure runTask gradleLearningProjectLab2"
-    doFirst {
-        println "doFirst runTask gradleLearningProjectLab2"
+    println tasks.getByName("packageDebug")
+    task ("scriptTask") {
+        println "afterEvaluate - scriptTask"
     }
 }
-
 ```
-执行gradle runTask(若遇到了JDK版本问题，可以参考)，输出如下：
+在app.gradle中引用
+```groovy
+apply from: '../script.gradle'
+```
+构建时会有如下输出，说明脚本插件生效
 ```shell
-> Configure project :
-configure runTask gradleLearningProjectLab2
-Configure listener afterEvaluate
-gradle.afterProject
-afterEvaluate
-
-> Configure project :app
-Configure listener beforeEvaluate
-gradle.beforeProject
-Configure listener afterEvaluate
-gradle.afterProject
-Build listener projectsEvaluated
-gradle.taskGraph.whenReady
-
-> Task :runTask
-doFirst runTask gradleLearningProjectLab2
-Build listener buildFinished
+afterEvaluate - scriptTask
 ```
-
-### Gradle守护进程Daemon
-在项目启动时会开启一个client，在client中会启动一个daemon，client会和daemon建立长链接，当client关闭时，Daemon会保持启动，此时若有类似项目部署时，会通过新的client向daemon发送构建请求，此时构建速度就会非常快。  
-daemon默认存在3小时，可使用 --no-daemon 参数关闭。  
-运行项目时以下输出代表daemon相关操作:
-```shell
-Connected to the target VM, address
-Disconnected from the target VM, address
-```
-### Gradle属性扩展
-在gradle中可以使用ext对任意对象进行扩展
-* 对project进行扩展，其子project也会继承该属性
-* 由谁进行ext调用，就会对谁进行扩展，即ext调用者是扩展对象的所有者
-* 属性扩展相当于创建闭包，直接使用未定义的属性会创建
-
-使用时可以直接使用ext.xxx的方式访问，也可以使用属性扩展的方式访问。  
-coding验证，在Project的build.gradle中写入
-```gradle
-ext {
-    extA = 'extA'
-    extB = 'extB'
-}
-
-ext.extC = 'extC'
-
-println project.ext.extA
-println ext.extB
-println extC
-
-task runTask{
-    println 'runTask\t' + project.ext.extA
-    println 'runTask\t' + project.extB
-    println 'runTask\t' + extC
-}
-```  
-执行gradle runTask，输出如下：
-```shell
-> Configure project :
-extA
-extB
-extC
-runTask	extA
-runTask	extB
-runTask	extC
-```  
-
-可以看到，因为是在当前project的build.gradle中声明的扩展，可以通过
-
-- project.ext.xxx
-- project.xxx
-- ext.xxx
-- xxx
-
-的方式访问。  
-而在app的build.gradle中，可以通过project.xxx的方式访问。
-```gradle
-task runAppTask {
-    println 'runAppTask\t' + project.extA
-    println 'runAppTask\t' + project.extB
-    println 'runAppTask\t' + project.extC
-}
-```
-app输出如下
-```shell
-> Configure project :app
-runAppTask	extA
-runAppTask	extB
-runAppTask	extC
-```
-可以看出，对project扩展的属性，对所有子project都可见。  
-上述方式都是在.gradle中配置的扩展属性，在gradle.properties中也可以进行扩展.
-```
-//gradle.properties
-MIN_SDK_VERSION=24
-TARGET_SDK_VERSION=34
-COMPILE_SDK_VERSION=34
-```  
-在app的.gradle中可以通过以下方式访问
-```gradle
+### 2.二进制插件
+二进制插件本质就是实现了org.gradle.api.Plugin接口的jar包,分为内部插件和第三方插件
+#### <1>内部插件
+内部插件，由Gradle提供，使用 `apply plugin: pluginId` ,内部插件都有其唯一Id
+#### <2>第三方插件
+第三方插件，由第三方开发者提供，可以是jar包，也可以是目录.要想在构建脚本中使用第三方插件，需要在buildscript里配置对应的classpath。  
+buildscript{}主要用于在项目构建之前配置项目相关依赖。  
+## AGP(Android Gradle Plugin)
+AGP是Android Gradle插件，是Android Studio中提供的构建工具，它提供了对Android项目的构建和管理能力。  
+常见如build、assemble、installDebug...  
+只需在项目中引用该插件并配置相关属性，就能快速使用。  
+AGP常用扩展属性:  
+```groovy
 android {
-    ...
-    compileSdk Integer.parseInt(COMPILE_SDK_VERSION)
+    // 设置编译时用的 Android 版本
+    compileSdkVersion 31
+    
+    // 设置编译时使用的构建工具的版本，Android Studio3.0 后去除此项配置
+    buildToolsVersion '30.0.3'
 
+    // 没有配置 productFlavors 时的默认配置
     defaultConfig {
-        ...
-        minSdk Integer.parseInt(MIN_SDK_VERSION)
-        targetSdk Integer.parseInt(TARGET_SDK_VERSION)
-        ...
+        // 项目的包名
+        applicationId "com.billy.myapplication"
+        // 项目最低兼容的版本
+        minSdkVersion 16
+        // 项目的目标版本
+        targetSdkVersion 31
+        // 版本号
+        versionCode 1
+        // 版本名称
+        versionName "1.0"
+        // 表明要使用 AndroidJUnitRunner 进行单元测试
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
-    ...
-}
-```
-在app的build.gradle中，通过打印输出验证一下
-```gradle
-task versionLog{
-    println 'MIN_SDK_VERSION: ' + MIN_SDK_VERSION
-    println 'COMPILE_SDK_VERSION: ' + COMPILE_SDK_VERSION
-    println 'TARGET_SDK_VERSION: ' + TARGET_SDK_VERSION
-}
-```
-执行gradle versionLog，输出如下，符合预期：
-```shell
-MIN_SDK_VERSION: 24
-COMPILE_SDK_VERSION: 34
-TARGET_SDK_VERSION: 34
-```
-## Gradle自定义任务
-先前的实验中，我们的交互方式都是通过println打印输出，那么如何进行更加复杂的逻辑操作呢，gradle提供了task的概念，可以自定义任务。  
-我们可以在build.gradle中自定义任务
-- task就是对DefaultTask的实现，可以通过task.doFirst、task.doLast、task.dependsOn等方法来进行任务的配置
-- 可以使用自定义类继承DefaultTask:
-    - 使用@TaskAction注解标记方法，该方法会被gradle执行
-    - 使用@Input注解表示任务的输入参数
-    - 使用@OutputFile表示任务的输出文件
-    - 使用inputs,outputs设置任务的输入输出
-    - 一个任务的输出可以作为另一个任务的输入(存在隐式依赖)
+    
+    // 构建环境配置，一般有两种 release、debug，也可以自定义
+    buildTypes {
+        // 正式
+        release {
+            // 配置 Log 日志
+            buildConfigField("boolean", "LOG_DEBUG", "false")
+            
+            // 配置 URL 前缀
+            buildConfigField("String", "URL_PERFIX", "\"https://release.cn/\"")
+            
+            // 是否对代码进行混淆
+            minifyEnabled false
+            
+            // 指定混淆的规则文件
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            
+            // 设置签名信息
+            signingConfig signingConfigs.release
+            
+            // 是否在 APK 中生成伪语言环境，帮助国际化的东西，一般使用的不多
+            pseudoLocalesEnabled false
+            
+            // 是否对 APK 包执行 ZIP 对齐优化，减小 zip 体积，增加运行效率
+            zipAlignEnabled true
+            
+            // 在 applicationId 中添加了一个后缀，一般使用的不多
+            applicationIdSuffix 'test'
+            
+            // 在 versionName 中添加了一个后缀，一般使用的不多
+            versionNameSuffix 'test'
+        }
+        
+        // 开发
+        debug {
+            // 配置 Log 日志
+            buildConfigField("boolean", "LOG_DEBUG", "true")
+            
+            // 配置 URL 前缀
+            buildConfigField("String", "URL_PERFIX", "\"https://test.com/\"")
+            
+            // 是否对代码进行混淆
+            minifyEnabled false
+            
+            // 指定混淆的规则文件
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            
+            // 设置签名信息
+            signingConfig signingConfigs.debug
+            
+            // 是否支持断点调试
+            debuggable false
+            
+            // 是否可以调试NDK代码
+            jniDebuggable false
+            
+            // 是否开启渲染脚本就是一些c写的渲染方法
+            renderscriptDebuggable false
+            
+            // 是否对 APK 包执行 ZIP 对齐优化，减小 zip 体积，增加运行效率
+            zipAlignEnabled true
+            
+            // 是否在 APK 中生成伪语言环境，帮助国际化的东西，一般使用的不多
+            pseudoLocalesEnabled false
+            
+            // 在 applicationId 中添加了一个后缀，一般使用的不多
+            applicationIdSuffix 'test'
+            
+            // 在 versionName 中添加了一个后缀，一般使用的不多
+            versionNameSuffix 'test'
+        }
+        
+        custom {
+            // 继承上面 release 的配置
+            initWith release
+            applicationIdSuffix ".releaseCutsom"
+        }
+    }
+    
+    // 打包签名配置
+    signingConfigs {
+        // 正式
+        release {
+            keyAlias 'test'
+            keyPassword '123456'
+            storeFile file('test.keystore')
+            storePassword '123456'
+        }
+        // 开发
+        debug {
+            keyAlias 'test'
+            keyPassword '123456'
+            storeFile file('test.keystore')
+            storePassword '123456'
+        }
+    }
+    
+    // 目录指向配置
+    sourceSets {
+        main {
+            // 指定 lib 库目录
+            jniLibs.srcDirs = ['libs']
+            
+            // 根据条件指定 manifest 文件
+            if (isDebug.toBoolean()) {
+                manifest.srcFile 'src/main/debug/AndroidManifest.xml'
+            } else {
+                manifest.srcFile 'src/main/release/AndroidManifest.xml'
+            }
+        }
+    }
+    
+    // 打包时的相关配置
+    packagingOptions{
+        // pickFirsts 作用是当有重复文件时，打包会报错，这样配置会使用第一个匹配的文件打包进入 apk
+        // 表示当 apk 中有重复的 META-INF 目录下有重复的 LICENSE 文件时，只用第一个，这样打包就不会报错
+        pickFirsts = ['META-INF/LICENSE']
+    
+        // merges 合并，当出现重复文件时，合并重复的文件，然后打包入 apk
+        // 这个是有默认值的 merges = [] 这样会把默认值去掉，所以我们用下面这种方式，在默认值后添加
+        merge 'META-INF/LICENSE'
+    
+        // 这个是在同时使用 butterknife、dagger2 做的一个处理。同理，遇到类似的问题，只要根据 gradle 的提示，做类似处理即可
+        exclude 'META-INF/services/javax.annotation.processing.Processor'
+    }
+    
+    
+    /**
+        这个配置是经常会使用到的，通常在适配多个渠道的时候，需要为特定的渠道做部分特殊的处理，
+        比如设置不同的包名、应用名等。场景：当我们使用友盟统计时，通常需要设置一个渠道ID，那么
+        我们就可以利用productFlavors来生成对应渠道信息的包
+     */
+    productFlavors {
+        wandoujia {
+            // 豌豆荚渠道包配置，manifestPlaceholders（AndroidManifest里的占位符）
+            manifestPlaceholders = [UMENG_CHANNEL_VALUE: "wandoujia"]
+        }
+        xiaomi {
+            manifestPlaceholders = [UMENG_CHANNEL_VALUE: "xiaomi"]
+            // 配置包名
+            applicationId "com.wiky.gradle.xiaomi"
+        }
+        _360 {
+            manifestPlaceholders = [UMENG_CHANNEL_VALUE: "_360"]
+        }
+        ***
+    }
 
-### Demo1.文件数据写入
-build.gradle:
-
-```gradle
-class WriteFileTask extends DefaultTask {
-    @TaskAction
-    void writeFile() {
-        println "writeFile()"
-        def inFile = inputs.files.singleFile
-        def outFile = outputs.files.singleFile
-        outFile.createNewFile()
-        outFile.text = inFile.text
+    /**
+        Lint 是Android Studio 提供的 代码扫描分析工具，它可以帮助我们发现代码结构/质量问题，
+        同时提供一些解决方案，而且这个过程不需要我们手写测试用例。
+        Lint 发现的每个问题都有描述信息和等级（和测试发现 bug 很相似），我们可以很方便地定位问题，
+        同时按照严重程度进行解决。
+     */
+    lintOptions {
+        // 即使报错也不会停止打包
+        abortOnError false
+        // 打包 release 版本的时候进行检测
+        checkReleaseBuilds false
     }
 }
 
-task writeFileTask(type: WriteFileTask) {
-    inputs.file file('app/src/main/java/com/example/gradlelearningproject/MainActivity.kt')
-    outputs.file file('text.txt')
-}
-```  
-执行gradle writeFileTask，目录新增text.txt文件，内容与MainActivity.kt一致.
-
-### Demo2.文件压缩
-
-app - build.gradle
-```gradle
-task outPutsZip(type: Zip) {
-    // 压缩build/outputs
-    archiveFileName = 'outPutsZip.zip'
-    println "outPutsZip println: " + buildDir
-    destinationDirectory =  file("${buildDir}/outputsZip")
-    from "${buildDir}/outputs"
-}
-
-task deleteZipFolder(type: Delete) {
-    // 删除 build 目录下的 outputsZip 文件夹
-    delete "${buildDir}/outputsZip"
+/**
+     该闭包定义了项目的依赖关系，一般项目都有三种依赖方式：本地依赖、库依赖和远程依赖。
+     本地依赖可以对本地的jar包或目录添加依赖关系，库依赖可以对项目中的库模块添加依赖关系，
+     远程依赖可以对jcener库上的开源项目添加依赖关系。从Android Studio3.0后compile引入库不在使用，
+     而是通过 api 和 implementation，api 完全等同于以前的 compile，用 api 引入的库整个项目都
+     可以使用，用 implementation 引入的库只有对应的 Module 能使用，其他 Module 不能使用，
+     由于之前的项目统一用 compile 依赖，导致的情况就是模块耦合性太高，不利于项目拆解，
+     使用 implementation 之后虽然使用起来复杂了但是做到降低偶合兴提高安全性。
+ */
+dependencies {
+    // 本地 jar 包依赖
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    // 远程依赖
+    implementation 'com.android.support:appcompat-v7:27.1.1'
+    implementation 'com.android.support.constraint:constraint-layout:1.1.2'
+    // 声明测试用例库
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'com.android.support.test:runner:1.0.2'
+    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
 }
 ```
-执行gradle outPutsZip，build目录新增outputsZip/outPutsZip.zip文件.
+## 自定义Gradle插件
+### 1.buildscript
+在build.gradle中直接编写 `不推荐`
+### 2.buildSrc
+在项目根目录下创建buildSrc目录，会自动识别并构建。sync后生成其build目录，groovy/java/kotlin也会变成源文件目录，之后编写代码。  
+ 之后可以通过插件类的全类名来使用。
+### 独立项目  
+Todo  
 
-<div style="display: flex; align-items: center;">
-    <img src="img/build_zip.jpg" alt="Image 1" style="height: 150px; margin-right: 10px;">
-    <img src="img/build_zip2.jpg" alt="Image 2" style="height: 150px;">
-</div>  
-
-执行gradle deleteZipFolder，可以删除build目录下的outputsZip文件夹.
-
+新建一个module工程，只保留build.gradle和src/main目录
+ - 编写插件代码
+ - 配置plugin属性
+ - 配置build.gradle
+ - 发布插件
+ - 在其他项目中使用

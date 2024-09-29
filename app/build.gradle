@@ -3,6 +3,9 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.android)
 }
 
+apply from: '../script.gradle'
+apply plugin: MyPlugin
+
 android {
     namespace 'com.example.gradlelearningproject'
     compileSdk Integer.parseInt(COMPILE_SDK_VERSION)
@@ -65,19 +68,6 @@ dependencies {
     debugImplementation libs.androidx.ui.test.manifest
 }
 
-task runAppTask {
-    println 'runAppTask\t' + project.extA
-    println 'runAppTask\t' + project.extB
-    println 'runAppTask\t' + project.extC
-}
-
-task versionLog{
-    println 'MIN_SDK_VERSION: ' + MIN_SDK_VERSION
-    println 'COMPILE_SDK_VERSION: ' + COMPILE_SDK_VERSION
-    println 'TARGET_SDK_VERSION: ' + TARGET_SDK_VERSION
-}
-
-
 task deleteZipFolder(type: Delete) {
     // 删除 build 目录下的 outputsZip、outputs 文件夹
     delete "${buildDir}/outputsZip"
@@ -90,3 +80,19 @@ task outPutsZip(type: Zip) {
     destinationDirectory =  file("${buildDir}/outputsZip")
     from "${buildDir}/outputs"
 }
+
+class MyPlugin implements Plugin<Project> {
+
+    @Override
+    void apply(Project project) {
+        println "MyPlugin apply"
+
+        project.afterEvaluate {
+            println "MyPlugin afterEvaluate" + project.tasks.getByName("packageDebug")
+            project.task("MyPlugin"){
+                println "MyPlugin"
+            }
+        }
+    }
+}
+
